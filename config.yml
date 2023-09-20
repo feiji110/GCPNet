@@ -1,0 +1,99 @@
+config:
+  project_name: "GCPNet"                 # Name of the project.
+  net: "GCPNet"                          # Name of the network
+  output_dir: "./output"                 # Output directory for the training model
+  self_loop: True                        # Whether to add self loop to the graph
+  n_neighbors: 12                        #. of nearest neighbors for the atom
+  debug: False                           # Whether to run in debug mode: print net and optimizer 
+
+netAttributes:
+  firstUpdateLayers: 4                   # #. of layers for updating the first-order update 
+  secondUpdateLayers: 4                  # #. of layers for updating the second-order update
+  atom_input_features: 105               # dimensions of atom features:  should be [dim(atom_init) + n_neighbors + 1]       
+  edge_input_features: 50                # RBF dimensions of the edge feature
+  triplet_input_features: 40             # dimensions of triplet features
+  embedding_features: 64                 # #. of embedding features
+  hidden_features: 32                    # #. of hidden features
+  output_features: 1                     # #. of output features
+  min_edge_distance: 0.0                 # minimum distance for the bond
+  max_edge_distance: 8.0                 # maximum distance for the bond
+  link: "identity"                       # link function for the output layer: surport "identity", "exp", "sigmoid"
+  batch_size: 64                         # batch size 
+  num_workers: 0                         # #. of workers for data loading
+  dropout_rate: 0.0                      # dropout rate for GCAO
+hyperParameters:
+  lr: 0.001                              # learning rate
+  optimizer: "AdamW"                     # optimizer: support "AdamW", "Adam", "SGD"
+  optimizer_args:                        # optimizer arguments
+    weight_decay: 0.00001                # weight decay
+  scheduler: "ReduceLROnPlateau"         # scheduler: support "ReduceLROnPlateau", "CosineAnnealingLR", "CosineAnnealingWarmRestarts"
+  scheduler_args:                        # scheduler arguments
+    mode: "min"
+    factor: 0.8
+    patience: 10
+    min_lr: 0.00001
+    threshold: 0.0002
+  seed: 666                              # random seed
+  epochs: 500                            # #. of epochs
+  patience: 50                           # patience for early stopping  
+
+data:
+  points: all                            # points for the dataset: support "all", and a number smaller than the #. of data points
+  dataset_path: './data'                 # path for all datasets
+  dataset_name: '2d'                     # name of the dataset, support '2d','cubic', 'mp18','pt', 'mof' etc. 
+  target_name: 'property'                # name of the target, support 'property', 'formation_energy_per_atom'
+  pin_memory: True                       # whether to pin memory for data loading
+  num_folds: 5                           # #. of folds for cross validation
+predict:
+  model_path: 'model.pt'                 # path for the model
+  output_path: 'output.csv'              # path for the predict output
+
+visualize_args:
+  perplexity: 50                         # perplexity for t-SNE
+  early_exaggeration: 12                 # early_exaggeration for t-SNE
+  learning_rate: 300                     # learning_rate for t-SNE
+  n_iter: 5000                           # #.of iterations run for t-SNE
+  verbose: 1                             # Verbosity level. for t-SNE,support 0,1,2
+  random_state: 42                       # random_state for t-SNE
+
+wandb:
+  log_enable: True                       # whether to enable wandb, support True, False
+  sweep_count: 5                         # integer value to the count parameter to set the maximum number of runs to try.
+  entity: "your_entity"                  # entity name for wandb,see https://docs.wandb.ai/guides/sweeps/start-sweep-agents
+  sweep_args:                            # sweep arguments
+    method: random
+    parameters:
+      lr: 
+        distribution: log_uniform_values
+        min: 0.000001
+        max: 0.1
+      
+      batch_size:
+        distribution: q_uniform
+        q: 8
+        min: 32
+        max: 256
+
+      dropout_rate: 
+        distribution: uniform
+        min: 0
+        max: 0.5
+
+      firstUpdateLayers:
+        distribution: q_uniform
+        q: 1
+        min: 1
+        max: 4
+
+      secondUpdateLayers:
+        distribution: q_uniform
+        q: 1
+        min: 1
+        max: 4
+
+      hidden_features:
+        distribution: q_uniform
+        q: 32
+        min: 32
+        max: 256
+
