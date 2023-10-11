@@ -42,11 +42,11 @@ class MP18(InMemoryDataset):
         self.target_name = target_name # target property name
         self.device = torch.device('cpu')
 
-        super(MP18, self).__init__(root, transform, pre_transform)
         if self.name == 'matbench':
-            self.data, self.slices = matbenchRaw[0], matbenchRaw[1]
+            self.data = matbenchRaw
         else:
             self.data, self.slices = torch.load(self.processed_paths[0])
+        super(MP18, self).__init__(root, transform, pre_transform)
         
     @property
     def raw_dir(self):
@@ -141,7 +141,7 @@ class MP18(InMemoryDataset):
         for i, s in enumerate(tqdm(df["structure"])):
             if i == self.points:  # limit the dataset size
                 break
-            s = Structure.from_str(s, fmt="cif") 
+            s = Structure.from_str(s, fmt="cif") if self.name != 'matbench' else s
             s = self.pymatgen2ase(s)
             d = {}
             pos = torch.tensor(s.get_positions(), dtype=torch.float)  
@@ -198,7 +198,7 @@ class MP18(InMemoryDataset):
         return dict_structures, y
     
     def get_data_list(self, dict_structures, y):
-        
+        print(f"entering")
         n_structures = len(dict_structures)
         data_list = [Data() for _ in range(n_structures)]
 

@@ -57,7 +57,7 @@ visualize_args:
   random_state: 42                       # random_state for t-SNE
 
 wandb:
-  log_enable: True                       # whether to enable wandb, support True, False
+  log_enable: False                       # whether to enable wandb, support True, False
   sweep_count: 5                         # integer value to the count parameter to set the maximum number of runs to try.
   entity: "your_entity"                  # entity name for wandb,see https://docs.wandb.ai/guides/sweeps/start-sweep-agents
   sweep_args:                            # sweep arguments

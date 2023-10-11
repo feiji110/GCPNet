@@ -24,7 +24,7 @@ class Flags:
 
         self.parser.add_argument(
             "--task_type",
-            choices=["train", "test", "predict", "visualize", "hyperparameter", "CV"],
+            choices=["train", "test", "predict", "visualize", "hyperparameter", "CV", "matbench"],
             required=True,
             type=str,
             help="Type of task to perform: train, test, predict, visualize, hyperparameter",)

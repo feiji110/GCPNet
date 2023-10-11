@@ -240,11 +240,11 @@ def matbench(config):
     from matbench import MatbenchBenchmark
     mb = MatbenchBenchmark(autoload=False)
     mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure']
-    for task in mbTasks:
+    for task in mbTasks[4:]:
         task.load()
         for fold in task.folds:
             trainX, trainY = task.get_train_and_val_data(fold)
-            testX, testY = task.get_test_data(fold)
+            testX, testY = task.get_test_data(fold, include_target=True)
             rawData = {'trainX': trainX, 'trainY': trainY, 'testX': testX, 'testY': testY}
             dataset = MP18(root=config.dataset_path, name=config.dataset_name, matbenchRaw=rawData, transform=Compose([GetAngle(), ToFloat(
                 )]), r=config.max_edge_distance, n_neighbors=config.n_neighbors, edge_steps=config.edge_input_features, image_selfloop=True, points=config.points, target_name=trainY.name)
