@@ -43,7 +43,10 @@ class MP18(InMemoryDataset):
         self.device = torch.device('cpu')
         self._rawDf = matbenchRaw
         super(MP18, self).__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        if self.name == 'matbench':
+            self.data, self.slices, self.matbench_train_test = torch.load(self.processed_paths[0])
+        else:
+            self.data, self.slices = torch.load(self.processed_paths[0])
         
     @property
     def raw_dir(self):
@@ -92,8 +95,11 @@ class MP18(InMemoryDataset):
         data_list = self.get_data_list(dict_structures, y) # 获取列表
 
         # 3. save 
-        data, slices = self.collate(data_list) 
-        torch.save((data, slices), self.processed_paths[0])
+        data, slices = self.collate(data_list)
+        if self.name == 'matbench':
+            torch.save((data, slices, self.matbench_train_test), self.processed_paths[0])
+        else:
+            torch.save((data, slices), self.processed_paths[0])
         logging.info("Processed data saved successfully.")
         
     def __str__(self):
