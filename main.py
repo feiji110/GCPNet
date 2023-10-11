@@ -13,7 +13,7 @@ from torch_geometric.transforms import Compose
 
 from model import GCPNet
 from utils.keras_callbacks import WandbCallback
-from utils.dataset_utils import MP18, dataset_split, get_dataloader
+from utils.dataset_utils import MP18, dataset_split, get_dataloader, get_dataloader_4matbench
 from utils.flags import Flags
 from utils.train_utils import KerasModel, LRScheduler
 from utils.transforms import GetAngle, ToFloat
@@ -224,7 +224,56 @@ def visualize(config):
     #############
 
     return model
+
+def matbench(config):
+    name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
+    if config.log_enable:
+        wandb.init(project=config.project_name, name = name, save_code=False)
+        
+    if config.task_type.lower() == 'hyperparameter':
+        for k, v in wandb.config.items():
+            setattr(config, k, v)
+            print(f"searched keys: {k}: {v}")
+            
+    # # 1. load data
+    from matbench import MatbenchBenchmark
+    mb = MatbenchBenchmark(autoload=False)
+    mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure']
+    for task in mbTasks:
+        task.load()
+        for fold in task.folds:
+            trainX, trainY = task.get_train_and_val_data(fold)
+            testX, testY = task.get_test_data(fold)
+            rawData = {'trainX': trainX, 'trainY': trainY, 'testX': testX, 'testY': testY}
+            dataset = MP18(root=config.dataset_path, name=config.dataset_name, matbenchRaw=rawData, transform=Compose([GetAngle(), ToFloat(
+                )]), r=config.max_edge_distance, n_neighbors=config.n_neighbors, edge_steps=config.edge_input_features, image_selfloop=True, points=config.points, target_name=trainY.name)
+            train_loader, val_loader, test_loader = get_dataloader_4matbench(dataset, val_ratio=0.05, batch_size=config.batch_size, num_workers=config.num_workers)
+
+            # 2. load net
+            rank = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            net = setup_model(dataset, config).to(rank)
+            if config.debug:
+                print(net)
+
+            # 3. Set-up optimizer & scheduler
+            optimizer = setup_optimizer(net, config)
+            scheduler = setup_schduler(optimizer, config)
+
+            # 4. Start training
+            if config.log_enable:
+                callbacks = [WandbCallback(project=config.project_name,config=config)]
+            else:
+                callbacks = None
+            model = build_keras(net, optimizer, scheduler)
+            model.fit(train_loader, val_loader, ckpt_path=os.path.join(config.output_dir, config.net+'.pth'), epochs=config.epochs,
+                    monitor='val_loss', mode='min', patience=config.patience, plot=True, callbacks=callbacks)
+            
+            preds = model.predict(test_loader)
+            
+            if config.log_enable:
+                wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
+                wandb.finish()
 
 if __name__ == "__main__":
 
@@ -260,6 +309,9 @@ if __name__ == "__main__":
     elif config.task_type.lower() == 'predict':
         predict(config)
         
+    elif config.task_type.lower() == 'matbench':
+        matbench(config)
+
     else:
         raise NotImplementedError(f"Task type {config.task_type} not implemented. Supported types: train, test, cv, predict")
     

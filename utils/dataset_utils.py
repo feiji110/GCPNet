@@ -30,10 +30,10 @@ from utils.transforms import GetY
 import torch_geometric.transforms as T
 class MP18(InMemoryDataset):
 
-    def __init__(self, root='data/', name='MP18', transform=None, pre_transform=[GetY()], r=8.0, n_neighbors=12, edge_steps=50, image_selfloop=True, points=100,target_name="formation_energy_per_atom"):
+    def __init__(self, root='data/', name='MP18', matbenchRaw=None, transform=None, pre_transform=[GetY()], r=8.0, n_neighbors=12, edge_steps=50, image_selfloop=True, points=100,target_name="formation_energy_per_atom"):
         
         self.name = name.lower()
-        assert self.name in ['mp18', 'pt','2d','mof','surface','cubic', 'cif']
+        assert self.name in ['mp18', 'pt','2d','mof','surface','cubic', 'cif', 'matbench']
         self.r = r
         self.n_neighbors = n_neighbors
         self.edge_steps = edge_steps
@@ -43,7 +43,10 @@ class MP18(InMemoryDataset):
         self.device = torch.device('cpu')
 
         super(MP18, self).__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        if self.name == 'matbench':
+            self.data, self.slices = matbenchRaw[0], matbenchRaw[1]
+        else:
+            self.data, self.slices = torch.load(self.processed_paths[0])
         
     @property
     def raw_dir(self):
@@ -121,6 +124,15 @@ class MP18(InMemoryDataset):
                 cifFiles.append(strContent)
             ids = [os.path.basename(i).split('.')[0] for i in self.raw_paths]
             df = pd.DataFrame({'structure': cifFiles, 'material_id': ids, 'property': [.0]*len(ids)})
+        elif self.name.lower() in ['matbench']:
+            trainX, trainY = self.data['trainX'], self.data['trainY']
+            testX, testY = self.data['testX'], self.data['testY']
+            trainDf = pd.merge(trainX, trainY, on=trainX.index.name)
+            testDf = pd.merge(testX, testY, on=testX.index.name)
+            self.matbench_train_test = (len(trainDf), len(testDf))
+            rawDf = pd.concat([trainDf, testDf])
+            rawDf['material_id'] = rawDf.index
+            df = rawDf
         else:
             df  = pd.read_json(self.raw_paths[0]) 
         logging.info("Converting data to standardized form(dict format) for downstream processing.")
@@ -372,6 +384,23 @@ def loader_setup_CV(index, batch_size, dataset,  num_workers=0):
 
 
     return train_loader, test_loader, train_dataset, test_dataset
+
+def get_dataloader_4matbench(dataset: MP18, val_ratio=0.05, batch_size=64, num_workers=0, pin_memory=False):
+    from torch.utils.data import Subset
+    train_val_size = dataset.matbench_train_test[0]
+    test_size = dataset.matbench_train_test[1]
+    total = train_val_size + test_size
+    val_size = int(total*val_ratio)
+    train_size = train_val_size - val_size
+    
+    train_dataset = Subset(dataset, indices=range(0, train_size))
+    val_dataset = Subset(dataset, indices=range(train_size, val_size))
+    test_dataset = Subset(dataset, indices=range(train_size+val_size, test_size))
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    return train_loader, val_loader, test_loader
 
 if __name__ == "__main__":
     dataset = MP18(root="data",name='pt',transform=None, r=8.0, n_neighbors=12, edge_steps=50, image_selfloop=True, points=100,target_name="property")
