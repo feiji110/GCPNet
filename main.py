@@ -240,7 +240,7 @@ def matbench(config):
     from matbench import MatbenchBenchmark
     mb = MatbenchBenchmark(autoload=False)
     mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure']
-    for task in mbTasks[4:]:
+    for task in mbTasks:
         task.load()
         for fold in task.folds:
             trainX, trainY = task.get_train_and_val_data(fold)
@@ -265,15 +265,19 @@ def matbench(config):
                 callbacks = [WandbCallback(project=config.project_name,config=config)]
             else:
                 callbacks = None
+            best_model_path = os.path.join(config.output_dir, config.net+'.pth')
             model = build_keras(net, optimizer, scheduler)
-            model.fit(train_loader, val_loader, ckpt_path=os.path.join(config.output_dir, config.net+'.pth'), epochs=config.epochs,
+            model.fit(train_loader, val_loader, ckpt_path=best_model_path, epochs=config.epochs,
                     monitor='val_loss', mode='min', patience=config.patience, plot=True, callbacks=callbacks)
             
-            preds = model.predict(test_loader)
+            preds = model.predict(test_loader, best_model_path)
+            print(preds)
+            task.record(torch.Tensor(preds))
             
             if config.log_enable:
                 wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
                 wandb.finish()
+    mb.to_json("./results.json.gz")
 
 if __name__ == "__main__":
 

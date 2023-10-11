@@ -287,6 +287,7 @@ class KerasModel(torch.nn.Module):
             writer = csv.writer(csv_file, delimiter=",")
             for row in rows:
                 writer.writerow(row)
+        return outputs
     @torch.no_grad()
     def cubic(self, test_data,ckpt_path, test_out_path='cubic_out.csv'):
         self.ckpt_path = ckpt_path

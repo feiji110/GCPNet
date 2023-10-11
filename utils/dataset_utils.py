@@ -41,12 +41,9 @@ class MP18(InMemoryDataset):
         self.points = points# dataset snumbers
         self.target_name = target_name # target property name
         self.device = torch.device('cpu')
-
-        if self.name == 'matbench':
-            self.data = matbenchRaw
-        else:
-            self.data, self.slices = torch.load(self.processed_paths[0])
+        self._rawDf = matbenchRaw
         super(MP18, self).__init__(root, transform, pre_transform)
+        self.data, self.slices = torch.load(self.processed_paths[0])
         
     @property
     def raw_dir(self):
@@ -125,8 +122,8 @@ class MP18(InMemoryDataset):
             ids = [os.path.basename(i).split('.')[0] for i in self.raw_paths]
             df = pd.DataFrame({'structure': cifFiles, 'material_id': ids, 'property': [.0]*len(ids)})
         elif self.name.lower() in ['matbench']:
-            trainX, trainY = self.data['trainX'], self.data['trainY']
-            testX, testY = self.data['testX'], self.data['testY']
+            trainX, trainY = self._rawDf['trainX'], self._rawDf['trainY']
+            testX, testY = self._rawDf['testX'], self._rawDf['testY']
             trainDf = pd.merge(trainX, trainY, on=trainX.index.name)
             testDf = pd.merge(testX, testY, on=testX.index.name)
             self.matbench_train_test = (len(trainDf), len(testDf))
@@ -394,8 +391,8 @@ def get_dataloader_4matbench(dataset: MP18, val_ratio=0.05, batch_size=64, num_w
     train_size = train_val_size - val_size
     
     train_dataset = Subset(dataset, indices=range(0, train_size))
-    val_dataset = Subset(dataset, indices=range(train_size, val_size))
-    test_dataset = Subset(dataset, indices=range(train_size+val_size, test_size))
+    val_dataset = Subset(dataset, indices=range(train_size, val_size+train_size))
+    test_dataset = Subset(dataset, indices=range(train_size+val_size, train_size+val_size+test_size))
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
