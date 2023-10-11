@@ -246,7 +246,8 @@ def matbench(config):
             trainX, trainY = task.get_train_and_val_data(fold)
             testX, testY = task.get_test_data(fold, include_target=True)
             rawData = {'trainX': trainX, 'trainY': trainY, 'testX': testX, 'testY': testY}
-            dataset = MP18(root=config.dataset_path, name=config.dataset_name, matbenchRaw=rawData, transform=Compose([GetAngle(), ToFloat(
+            data_cache_dir = os.path.join(config.dataset_path, 'matbench', task.dataset_name, f"_{fold}")
+            dataset = MP18(root=data_cache_dir, name=config.dataset_name, matbenchRaw=rawData, transform=Compose([GetAngle(), ToFloat(
                 )]), r=config.max_edge_distance, n_neighbors=config.n_neighbors, edge_steps=config.edge_input_features, image_selfloop=True, points=config.points, target_name=trainY.name)
             train_loader, val_loader, test_loader = get_dataloader_4matbench(dataset, val_ratio=0.05, batch_size=config.batch_size, num_workers=config.num_workers)
 
@@ -277,7 +278,7 @@ def matbench(config):
             if config.log_enable:
                 wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
                 wandb.finish()
-    mb.to_json("./results.json.gz")
+    mb.to_file("./results.json.gz")
 
 if __name__ == "__main__":
 
