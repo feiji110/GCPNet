@@ -271,8 +271,8 @@ def matbench(config):
                     monitor='val_loss', mode='min', patience=config.patience, plot=True, callbacks=callbacks)
             
             preds = model.predict(test_loader, best_model_path)
-            print(preds)
-            task.record(torch.Tensor(preds))
+            preds = torch.tensor(preds)
+            task.record(fold, preds)
             
             if config.log_enable:
                 wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
