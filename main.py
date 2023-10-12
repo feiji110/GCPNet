@@ -238,9 +238,25 @@ def matbench(config):
             
     # # 1. load data
     from matbench import MatbenchBenchmark
-    mb = MatbenchBenchmark(autoload=False)
-    mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure']
-    for task in mbTasks:
+    mb = MatbenchBenchmark(subset=['matbench_dielectric',
+                                    # 'matbench_expt_gap',
+                                    # 'matbench_expt_is_metal',
+                                    # 'matbench_glass',
+                                    'matbench_jdft2d',
+                                    'matbench_log_gvrh',
+                                    'matbench_log_kvrh',
+                                    'matbench_mp_e_form',
+                                    'matbench_mp_gap',
+                                    # 'matbench_mp_is_metal',
+                                    'matbench_perovskites',
+                                    'matbench_phonons',
+                                    # 'matbench_steels'
+                                    ] ,autoload=False)
+    # mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure' and task.metadata['task_type'] == 'regression']
+    # for task in mbTasks[:1]:
+    import json
+    import pandas as pd
+    for task in mb.tasks:
         task.load()
         for fold in task.folds:
             trainX, trainY = task.get_train_and_val_data(fold)
@@ -266,7 +282,7 @@ def matbench(config):
                 callbacks = [WandbCallback(project=config.project_name,config=config)]
             else:
                 callbacks = None
-            best_model_path = os.path.join(config.output_dir, config.net+'.pth')
+            best_model_path = os.path.join(config.output_dir, task.dataset_name+"_"+config.net+'.pth')
             model = build_keras(net, optimizer, scheduler)
             model.fit(train_loader, val_loader, ckpt_path=best_model_path, epochs=config.epochs,
                     monitor='val_loss', mode='min', patience=config.patience, plot=True, callbacks=callbacks)
@@ -274,10 +290,28 @@ def matbench(config):
             preds = model.predict(test_loader, best_model_path)
             preds = torch.tensor(preds)
             task.record(fold, preds)
-            
+           
+
             if config.log_enable:
                 wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
                 wandb.finish()
+        # save to file
+        outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
+        mb.to_file(outputfile)
+        # show the results
+        resultList = []
+        with open(outputfile) as f:
+            tmp = json.load(f)
+            for i in range(5):
+                # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+        resultDf = pd.DataFrame(resultList)
+        print(resultDf)
+        resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
+        mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
+        print(mean_std)
+        mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
+
     mb.to_file("./results.json.gz")
 
 if __name__ == "__main__":
