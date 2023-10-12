@@ -8,6 +8,7 @@ class Flags:
         '''
         self.parser = argparse.ArgumentParser(description="MatPlat inputs")
         self.add_required_args()
+        self.add_optional_args()
         args, unknown = self.get_args()
         default_config = self.parse_yml(args.config_file)
         updated_config = self.update_from_args(unknown, default_config)
@@ -35,7 +36,15 @@ class Flags:
             help="Default parameters for training",
             default='./config.yml'
         )
-
+    def  add_optional_args(self):
+        self.parser.add_argument(
+            "--matbenchTasklist",
+            nargs='+',
+            required=False,
+            type=int,
+            help="Indices for matbench tasks",
+            default=[4,2]
+        )
     def get_args(self):
         args, unknown = self.parser.parse_known_args()
         return args, unknown

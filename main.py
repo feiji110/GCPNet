@@ -238,22 +238,22 @@ def matbench(config):
             
     # # 1. load data
     from matbench import MatbenchBenchmark
-    mb = MatbenchBenchmark(subset=['matbench_dielectric',
-                                    # 'matbench_expt_gap',
-                                    # 'matbench_expt_is_metal',
-                                    # 'matbench_glass',
-                                    'matbench_jdft2d',
-                                    'matbench_log_gvrh',
-                                    'matbench_log_kvrh',
-                                    'matbench_mp_e_form',
-                                    'matbench_mp_gap',
-                                    # 'matbench_mp_is_metal',
-                                    'matbench_perovskites',
-                                    'matbench_phonons',
-                                    # 'matbench_steels'
-                                    ] ,autoload=False)
-    # mbTasks = [task for task in mb.tasks if task.metadata['input_type'] == 'structure' and task.metadata['task_type'] == 'regression']
-    # for task in mbTasks[:1]:
+    import numpy as np
+    matbenchTask = np.array(['matbench_dielectric',
+                    'matbench_jdft2d',
+                    'matbench_log_gvrh',
+                    'matbench_log_kvrh',
+                    'matbench_mp_e_form',
+                    'matbench_mp_gap',
+                    'matbench_perovskites',
+                    'matbench_phonons',
+                    ])
+    currentTask = []
+    if type(config.matbenchTasklist) == int:   
+        currentTask.append(matbenchTask[config.matbenchTasklist].tolist())
+    else:
+        currentTask.extend(matbenchTask[config.matbenchTasklist].tolist())
+    mb = MatbenchBenchmark(subset= currentTask,autoload=False)
     import json
     import pandas as pd
     for task in mb.tasks:
