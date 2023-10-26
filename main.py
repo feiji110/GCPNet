@@ -281,30 +281,30 @@ def matbench(config):
             preds = model.predict(test_loader, best_model_path)
             preds = torch.tensor(preds)
             task.record(fold, preds)
+            wandb.finish()
 
-
-
-        # save to file
-        outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
-        mb.to_file(outputfile)
-        # show the results
-        resultList = []
-        with open(outputfile) as f:
-            tmp = json.load(f)
-            for i in range(5):
-                # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-                resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-                if config.log_enable:
-                    wandb.log(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-        resultDf = pd.DataFrame(resultList)
-        print(resultDf)
-        resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
-        mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
-        print(mean_std)
-        mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
-        if config.log_enable:
-            wandb.log({"test_mae_mean":mean_std['mae'][0] , "test_mae_std":mean_std['mae'][1], "total_params":model.total_params()})
-    mb.to_file(config.output_dir+"/"+"results.json.gz")
+        with  wandb.init(project=config.project_name, config=config.__dict__, name = task.dataset_name+config.name, save_code=False):
+            # save to file
+            outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
+            mb.to_file(outputfile)
+            # show the results
+            resultList = []
+            with open(outputfile) as f:
+                tmp = json.load(f)
+                for i in range(5):
+                    # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                    resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                    if config.log_enable:
+                        wandb.log(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+            resultDf = pd.DataFrame(resultList)
+            print(resultDf)
+            resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
+            mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
+            print(mean_std)
+            mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
+            if config.log_enable:
+                wandb.log({"test_mae_mean":mean_std['mae'][0] , "test_mae_std":mean_std['mae'][1], "total_params":model.total_params()})
+        mb.to_file(config.output_dir+"/"+"results.json.gz")
 
 def matbenchTuning(config):
     name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -312,7 +312,7 @@ def matbenchTuning(config):
     output_dir = os.path.join(config.output_dir, name)
     if not(os.path.exists(output_dir)):
         os.makedirs(output_dir)
-    with  wandb.init(project=config.project_name, config=config.__dict__, name = config.name):
+    with  wandb.init(project=config.project_name, config=config.__dict__, name = config.name, save_code=False):
         config = wandb.config #更新传入的参数。 what's? callbacks.config与wandb.config、config的区别
         config.update({'output_dir': output_dir}, allow_val_change=True)
         matbench(config)
