@@ -120,6 +120,39 @@ class KerasModel(torch.nn.Module):
     def forward(self, x):
         return self.net.forward(x)
     
+    def fit_ddp(self,num_processes,train_data,
+        val_data=None, epochs=10, ckpt_path='checkpoint.pt',
+        patience=5, monitor="val_loss", mode="min", callbacks=None, 
+        plot=True, wandb=False, quiet=None, 
+        mixed_precision='no', cpu=False, gradient_accumulation_steps=1
+        ):
+        from accelerate import notebook_launcher
+        train_size = train_data.size if hasattr(train_data,'size') else len(train_data)
+        train_data.size = train_size//num_processes
+        if val_data:
+            val_size = val_data.size if hasattr(val_data,'size') else len(val_data)
+            val_data.size = val_size//num_processes
+            
+        args = (train_data,val_data,epochs,ckpt_path,patience,monitor,mode,
+            callbacks,plot,wandb,quiet,mixed_precision,cpu,gradient_accumulation_steps)
+        notebook_launcher(self.fit, args, num_processes=num_processes)
+        dfhistory = torch.load('dfhistory.pt')
+        
+        train_data.size = train_size 
+        if val_data:
+            val_data.size = val_size 
+        return dfhistory
+    @torch.no_grad()
+    def evaluate_ddp(self, num_processes, val_data, quiet=False):
+        from accelerate import notebook_launcher
+        val_size = val_data.size if hasattr(val_data,'size') else len(val_data)
+        val_data.size = val_size//num_processes
+        args = (val_data,quiet)
+        notebook_launcher(self.evaluate, args, num_processes=num_processes)
+        val_metrics = torch.load('val_metrics.pt')
+        val_data.size = val_size
+        return val_metrics
+    
     def fit(self, train_data, val_data=None, epochs=10,ckpt_path='checkpoint.pt',
             patience=5, monitor="val_loss", mode="min",
             mixed_precision='no',callbacks = None, plot = True, quiet = True):
