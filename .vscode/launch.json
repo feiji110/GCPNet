@@ -4,14 +4,24 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
-            "name": "Python: Current File",
+            "name": "matbench",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config_file", "config.yml", "--task_type", "matbench", "--dataset_name", "matbench"]
-        }
+            "args": ["--config_file", "config.yml", "--task_type", "matbench", "--dataset_name", "matbench","--epochs","1"]
+        },
+        {
+            "name": "matbenchTuning",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--config_file", "config.yml", "--task_type", "matbenchTuning", "--dataset_name", "matbench", "--log_enable", "True", ]
+        },
     ]
 }
