@@ -154,6 +154,10 @@ python main.py --config_file ./config.yml --dataset_path ./data --dataset_name 2
 2.  Create Feat_xxx branch
 3.  Commit your code
 4.  Create Pull Request
+## Tasks
++ [] add matbench
++ [] add matbench hyperparameter tuning
++ [] add matbench ddp
 
 <a name="contributors"></a>
 ## Contributors
