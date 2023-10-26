@@ -148,3 +148,4 @@ wandb/
 *.db
 *.csv
 *.png
+results.json.gz
