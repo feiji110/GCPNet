@@ -57,43 +57,59 @@ visualize_args:
   random_state: 42                       # random_state for t-SNE
 
 wandb:
-  log_enable: False                       # whether to enable wandb, support True, False
-  sweep_count: 5                         # integer value to the count parameter to set the maximum number of runs to try.
-  entity: "your_entity"                  # entity name for wandb,see https://docs.wandb.ai/guides/sweeps/start-sweep-agents
+  log_enable: True                       # whether to enable wandb, support True, False
+  sweep_count: 50   #                       # integer value to the count parameter to set the maximum number of runs to try.
+  entity: "19831122880"                  # entity name for wandb,see https://docs.wandb.ai/guides/sweeps/start-sweep-agents
   sweep_args:                            # sweep arguments
-    method: random
+    method: random    #   random
+    metric:
+      goal: minimize
+      name: test_mae_mean
     parameters:
+      project_name:
+        value: "matbench"
+      epochs:
+        value: 100   # 
+      optimizer:
+        values: ['Adam', 'SGD','AdamW']
       lr: 
         distribution: log_uniform_values
         min: 0.000001
         max: 0.1
-      
+      firstUpdateLayers:
+        values: [1, 2,3, 4]
+      secondUpdateLayers:
+        values: [1, 2, 3, 4]
+      hidden_features:
+        values: [32, 64, 128, 256]
       batch_size:
-        distribution: q_uniform
-        q: 8
-        min: 32
-        max: 256
+        values: [32,64,96,100,128]
+      # batch_size:
+      #   distribution: q_uniform
+      #   q: 8
+      #   min: 32
+      #   max: 256
 
       dropout_rate: 
         distribution: uniform
         min: 0
-        max: 0.5
+        max: 0.25
 
-      firstUpdateLayers:
-        distribution: q_uniform
-        q: 1
-        min: 1
-        max: 4
+      # firstUpdateLayers:
+      #   distribution: q_uniform
+      #   q: 1
+      #   min: 1
+      #   max: 4
 
-      secondUpdateLayers:
-        distribution: q_uniform
-        q: 1
-        min: 1
-        max: 4
+      # secondUpdateLayers:
+      #   distribution: q_uniform
+      #   q: 1
+      #   min: 1
+      #   max: 4
 
-      hidden_features:
-        distribution: q_uniform
-        q: 32
-        min: 32
-        max: 256
+      # hidden_features:
+      #   distribution: q_uniform
+      #   q: 32
+      #   min: 32
+      #   max: 256
 

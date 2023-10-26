@@ -25,7 +25,7 @@ class Flags:
 
         self.parser.add_argument(
             "--task_type",
-            choices=["train", "test", "predict", "visualize", "hyperparameter", "CV", "matbench"],
+            choices=["train", "test", "predict", "visualize", "hyperparameter", "CV", "matbench","matbenchTuning"],
             required=True,
             type=str,
             help="Type of task to perform: train, test, predict, visualize, hyperparameter",)
@@ -43,7 +43,7 @@ class Flags:
             required=False,
             type=int,
             help="Indices for matbench tasks",
-            default=[4,2]
+            default=[1]
         )
     def get_args(self):
         args, unknown = self.parser.parse_known_args()

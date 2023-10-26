@@ -226,16 +226,6 @@ def visualize(config):
     return model
 
 def matbench(config):
-    name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    if config.log_enable:
-        wandb.init(project=config.project_name, name = name, save_code=False)
-        
-    if config.task_type.lower() == 'hyperparameter':
-        for k, v in wandb.config.items():
-            setattr(config, k, v)
-            print(f"searched keys: {k}: {v}")
-            
     # # 1. load data
     from matbench import MatbenchBenchmark
     import numpy as np
@@ -278,23 +268,22 @@ def matbench(config):
             scheduler = setup_schduler(optimizer, config)
 
             # 4. Start training
-            if config.log_enable:
-                callbacks = [WandbCallback(project=config.project_name,config=config)]
-            else:
-                callbacks = None
             best_model_path = os.path.join(config.output_dir, task.dataset_name+"_"+config.net+'.pth')
             model = build_keras(net, optimizer, scheduler)
+            callbacks=None
+            plot = True
+            if log_config:
+                callbacks = [WandbCallback(project=config.project_name,config=config, save_code=False)]
+                plot = False  
             model.fit(train_loader, val_loader, ckpt_path=best_model_path, epochs=config.epochs,
-                    monitor='val_loss', mode='min', patience=config.patience, plot=True, callbacks=callbacks)
+                    monitor='val_loss', mode='min', patience=config.patience, plot=plot, callbacks=callbacks)
             
             preds = model.predict(test_loader, best_model_path)
             preds = torch.tensor(preds)
             task.record(fold, preds)
-           
 
-            if config.log_enable:
-                wandb.log({"test_mae":model.evaluate(test_loader)['val_mae'], "test_mape":model.evaluate(test_loader)['val_mape'], "total_params":model.total_params()})
-                wandb.finish()
+
+
         # save to file
         outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
         mb.to_file(outputfile)
@@ -305,14 +294,28 @@ def matbench(config):
             for i in range(5):
                 # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
                 resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                if config.log_enable:
+                    wandb.log(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
         resultDf = pd.DataFrame(resultList)
         print(resultDf)
         resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
         mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
         print(mean_std)
         mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
+        if config.log_enable:
+            wandb.log({"test_mae_mean":mean_std['mae'][0] , "test_mae_std":mean_std['mae'][1], "total_params":model.total_params()})
+    mb.to_file(config.output_dir+"/"+"results.json.gz")
 
-    mb.to_file("./results.json.gz")
+def matbenchTuning(config):
+    name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    config.name = name
+    output_dir = os.path.join(config.output_dir, name)
+    if not(os.path.exists(output_dir)):
+        os.makedirs(output_dir)
+    with  wandb.init(project=config.project_name, config=config.__dict__, name = config.name):
+        config = wandb.config #更新传入的参数。 what's? callbacks.config与wandb.config、config的区别
+        config.update({'output_dir': output_dir}, allow_val_change=True)
+        matbench(config)
 
 if __name__ == "__main__":
 
@@ -321,11 +324,12 @@ if __name__ == "__main__":
     
     flags = Flags()
     config = flags.updated_config
-    
-    name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    config.output_dir = os.path.join(config.output_dir, name)
-    if not(os.path.exists(config.output_dir)):
-        os.makedirs(config.output_dir)
+    if config.task_type.lower() != 'matbenchtuning':
+        name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        config.name = name
+        config.output_dir = os.path.join(config.output_dir, name)
+        if not(os.path.exists(config.output_dir)):
+            os.makedirs(config.output_dir)
     set_seed(config.seed)
 
     if config.task_type.lower() == 'train':
@@ -350,7 +354,11 @@ if __name__ == "__main__":
         
     elif config.task_type.lower() == 'matbench':
         matbench(config)
-
+    elif config.task_type.lower() == 'matbenchtuning':
+        sweep_id = wandb.sweep(config.sweep_args, config.entity, config.project_name)
+        def wandb_matbench():
+            return matbenchTuning(config)
+        wandb.agent(sweep_id, wandb_matbench, count=config.sweep_count)
     else:
         raise NotImplementedError(f"Task type {config.task_type} not implemented. Supported types: train, test, cv, predict")
     
