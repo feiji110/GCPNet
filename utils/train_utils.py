@@ -272,7 +272,7 @@ class KerasModel(torch.nn.Module):
                     callback_obj.on_validation_epoch_end(model = self)
         if self.accelerator.is_local_main_process:   
             dfhistory = pd.DataFrame(self.history) # bug
-            self.accelerator.print(dfhistory)
+            # self.accelerator.print(dfhistory)
             
             for callback_obj in self.callbacks:
                 callback_obj.on_fit_end(model = self)
