@@ -21,7 +21,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config_file", "config.yml", "--task_type", "matbenchTuning", "--dataset_name", "matbench", "--log_enable", "True", ]
+            "args": ["--config_file", "./config/matbench.yml", "--task_type", "matbenchTuning", "--project_name","matbenchtuning1" ]
         },
     ]
 }
