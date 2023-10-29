@@ -272,7 +272,7 @@ def matbench(config):
             model = build_keras(net, optimizer, scheduler)
             callbacks=None
             plot = True
-            if log_config:
+            if config.log_enable and config.task_type.lower() != 'matbenchtuning':
                 callbacks = [WandbCallback(project=config.project_name,config=config, save_code=False)]
                 plot = False  
             model.fit(train_loader, val_loader, ckpt_path=best_model_path, epochs=config.epochs,
@@ -281,29 +281,34 @@ def matbench(config):
             preds = model.predict(test_loader, best_model_path)
             preds = torch.tensor(preds)
             task.record(fold, preds)
-            wandb.finish()
+            if config.log_enable and config.task_type.lower() != 'matbenchtuning':
+                wandb.finish()
 
-        with  wandb.init(project=config.project_name, config=config.__dict__, name = task.dataset_name+config.name, save_code=False):
-            # save to file
-            outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
-            mb.to_file(outputfile)
-            # show the results
-            resultList = []
-            with open(outputfile) as f:
-                tmp = json.load(f)
-                for i in range(5):
-                    # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-                    resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-                    if config.log_enable:
-                        wandb.log(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
-            resultDf = pd.DataFrame(resultList)
-            print(resultDf)
-            resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
-            mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
-            print(mean_std)
-            mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
-            if config.log_enable:
-                wandb.log({"test_mae_mean":mean_std['mae'][0] , "test_mae_std":mean_std['mae'][1], "total_params":model.total_params()})
+
+        if config.log_enable and config.task_type.lower() != 'matbenchtuning':
+            wandb.init(project=config.project_name, config=config.__dict__, name = task.dataset_name+config.name, save_code=False)
+        # save to file
+        outputfile = config.output_dir+"/"+task.dataset_name +".json.gz"
+        mb.to_file(outputfile)
+        # show the results
+        resultList = []
+        with open(outputfile) as f:
+            tmp = json.load(f)
+            for i in range(5):
+                # print(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                resultList.append(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+                if config.log_enable:
+                    wandb.log(tmp['tasks'][task.dataset_name]['results']['fold_'+str(i)]['scores'])
+        resultDf = pd.DataFrame(resultList)
+        print(resultDf)
+        resultDf.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"results.csv")
+        mean_std = pd.DataFrame([resultDf.mean(),resultDf.std()])
+        print(mean_std)
+        mean_std.to_csv(config.output_dir+"/"+task.dataset_name +"_"+"mean_std.csv")
+        if config.log_enable:
+            wandb.log({"test_mae_mean":mean_std['mae'][0] , "test_mae_std":mean_std['mae'][1], "total_params":model.total_params()})
+        if config.log_enable and config.task_type.lower() != 'matbenchtuning':
+            wandb.finish()
         mb.to_file(config.output_dir+"/"+"results.json.gz")
 
 def matbenchTuning(config):
@@ -312,9 +317,12 @@ def matbenchTuning(config):
     output_dir = os.path.join(config.output_dir, name)
     if not(os.path.exists(output_dir)):
         os.makedirs(output_dir)
-    with  wandb.init(project=config.project_name, config=config.__dict__, name = config.name, save_code=False):
-        config = wandb.config #更新传入的参数。 what's? callbacks.config与wandb.config、config的区别
-        config.update({'output_dir': output_dir}, allow_val_change=True)
+    
+    with  wandb.init(project=config.project_name, config=config.sweep_args["parameters"], name = config.name, save_code=False):
+        # 在init时已经更新了搜索参数，wandb.config是最新的，但是config[NameSpace]没有更新，需要手动更新
+        config.output_dir = output_dir # 只能放在里面作为局部变量，防止外面的output_dir被覆盖
+        for i in wandb.config.keys():
+            setattr(config, i, wandb.config[i])
         matbench(config)
 
 if __name__ == "__main__":
