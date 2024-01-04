@@ -63,7 +63,7 @@ We use the PyTorch Framework for our code. Please install the following packages
 
 <a name="dataset"></a>
 ## Datasets
-The experimental dataset is stored at [GCPNet](https://github.com/XXX). Please download the dataset and place it in the code repository in the following format:
+The experimental dataset is stored at [GCPNet](https://figshare.com/articles/dataset/GCPNet_data/23957907). Please download the dataset and place it in the code repository in the following format:
 
 ```
 .
