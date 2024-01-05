@@ -7,6 +7,7 @@ Github repository for our paper - **"GCPNet:A Novel Generic Crystal Pattern Grap
 * [Necessary Installations](#installation)
 * [Datasets](#dataset)
 * [Usage](#usage)
+* [Rreproducibility](#reproducibility)
 * [Contributors](#contributors)
 * [Acknowledgement](#acknowledgement)
 
@@ -147,6 +148,12 @@ We can also support hyperparameter search by modifying or specifying the **entit
 ```bash
 python main.py --config_file ./config.yml --dataset_path ./data --dataset_name 2d --task_type hyperparameter --project_name tuning --entity 'your_entity' 
 ```
+<a name="reproducibility"></a>
+## Rreproducibility
+To facilitate the reproduction of experimental results, we provide the shell script used in the experiment. The command for running the script is as follows:
+```bash
+bash script/comparative_study.sh
+```
 
 ## Contribution
 
@@ -158,7 +165,7 @@ python main.py --config_file ./config.yml --dataset_path ./data --dataset_name 2
 <a name="contributors"></a>
 ## Contributors
 
-1. hengda Gao([hendaGao](https://github.com/feiji110))
+1. hengda Gao
 2. Genglin Li
 3. Xiao-W. Guo
  
